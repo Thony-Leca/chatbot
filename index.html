@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chatbot</title>
+  <style>
+  /* Estilos simples para el chatbot */
+  #chat-container {
+      width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+      font-family: Arial, sans-serif;
+    }
+    #chat-box {
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    #user-input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    #send-button {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-top: 5px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="chat-container">
+  <div id="chat-box"></div>
+  <input type="text" id="user-input" placeholder="Escribe tu mensaje...">
+  <button id="send-button">Enviar</button>
+</div>
+
+<script>
+  const chatBox = document.getElementById('chat-box');
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
+
+  // Función para agregar un mensaje al chat box
+  function addMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.textContent = message;
+    chatBox.appendChild(messageElement);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  // Evento click del botón de enviar
+  sendButton.addEventListener('click', function() {
+    const userMessage = userInput.value;
+    addMessage(`Tú: ${userMessage}`);
+    
+    // Lógica del chatbot
+    const botResponse = obtenerRespuestaDelChatbot(userMessage);
+    addMessage(`Bot: ${botResponse}`);
+    
+    userInput.value = '';
+  });
+
+  // Función para obtener la respuesta del chatbot
+  function obtenerRespuestaDelChatbot(userMessage) {
+    const knowledgeBase = {
+      "preguntas": [
+        { "texto": "Hola", "respuesta": "¡Hola! ¿En qué puedo ayudarte?" },
+        { "texto": "¿Cómo estás?", "respuesta": "Estoy bien, gracias." },
+        // Agrega más preguntas y respuestas aquí según tu base de conocimientos
+      ]
+    };
+
+    const bannedWords = ['prohibida', 'otra_palabra', 'etc'];
+
+    const chatbot = new ChatBot(knowledgeBase, [], bannedWords);
+
+    const botResponse = chatbot.processUserInput(userMessage);
+    return botResponse;
+  }
+
+  // Clase ChatBot
+  class ChatBot {
+    constructor(knowledgeBase, palabrasClaveTecnicas, bannedWords) {
+      this.knowledgeBase = knowledgeBase;
+      this.palabrasClaveTecnicas = palabrasClaveTecnicas;
+      this.bannedWords = bannedWords;
+    }
+
+    processUserInput(userInput) {
+      const userLowerCase = userInput.toLowerCase();
+
+      const palabrasProhibidas = this.bannedWords.filter(word =>
+        userLowerCase.includes(word)
+      );
+
+      if (palabrasProhibidas.length > 0) {
+        return `Has sido vetado por usar palabras prohibidas: ${palabrasProhibidas.join(', ')}`;
+      }
+
+      const bestMatch = this.findBestMatch(userInput);
+      if (bestMatch) {
+        const answer = this.getAnswerForQuestion(bestMatch);
+        return answer;
+      } else {
+        return 'No sé la respuesta. ¿Puede enseñármela?';
+      }
+    }
+
+    findBestMatch(userQuestion) {
+      const questions = this.knowledgeBase.preguntas.map(q => q.texto);
+      const matches = questions.filter(q =>
+        similarity(q, userQuestion) > 0.6
+      );
+      return matches.length > 0 ? matches[0] : null;
+    }
+
+    getAnswerForQuestion(question) {
+      const foundQuestion = this.knowledgeBase.preguntas.find(q => q.texto === question);
+      return foundQuestion ? foundQuestion.respuesta : null;
+    }
+  }
+
+  // Función de similitud
+  function similarity(s1, s2) {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    const longerLength = longer.length;
+
+    if (longerLength === 0) {
+      return 1.0;
+    }
+
+    return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+  }
+
+  function editDistance(s1, s2) {
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+
+    const costs = new Array();
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i === 0) {
+          costs[j] = j;
+        } else if (j > 0) {
+          let newValue = costs[j - 1];
+          if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+          }
+          costs[j - 1] = lastValue;
+          lastValue = newValue;
+        }
+      }
+      if (i > 0) {
+        costs[s2.length] = lastValue;
+      }
+    }
+    return costs[s2.length];
+  }
+</script>
+
+</body>
+</html>
